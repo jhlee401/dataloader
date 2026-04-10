@@ -10,29 +10,37 @@ type Batch<K, V> = {
 export class DataLoader<K, V> {
   private batchFn: BatchFn<K, V>;
   private batch: Batch<K,V> | null;
+  private cache: Map<K, Promise<V>>;
 
   constructor(batchFn: BatchFn<K, V>) {
     this.batchFn = batchFn;
     this.batch = null;
+    this.cache = new Map();
   }
 
   load(key: K): Promise<V> {
     const batch = this.getCurrentBatch();
 
+    const cached = this.cache.get(key);
+    if (cached) return cached;
+
     batch.keys.push(key);
     const promise = new Promise<V>((resolve, reject) => {
       batch.callbacks.push({resolve, reject});
     })
+    this.cache.set(key, promise);
 
     return promise;
   }
 
   clear(key: K): this {
-    throw new Error('Not implemented');
+    this.cache.delete(key);
+    return this;
   }
 
   clearAll(): this {
-    throw new Error('Not implemented');
+    this.cache.clear();
+    return this;
   }
 
   private getCurrentBatch(): Batch<K,V> {

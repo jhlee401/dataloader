@@ -32,6 +32,22 @@ describe('Step 1: 배치 (Batching)', () => {
     expect(c).toBe(30);
   });
 
+  it('같은 틱에서 중복 키가 들어와도 batchFn에는 한 번만 전달된다', async () => {
+    const batchFn = vi.fn(async (keys: readonly number[]) =>
+      keys.map((k) => k * 10)
+    );
+    const loader = new DataLoader(batchFn);
+
+    const [a, b] = await Promise.all([
+      loader.load(1),
+      loader.load(1),
+    ]);
+
+    expect(batchFn).toHaveBeenCalledWith([1]);
+    expect(a).toBe(10);
+    expect(b).toBe(10);
+  });
+
   it('다른 틱에서 호출된 load는 각각 별도 배치로 처리된다', async () => {
     const batchFn = vi.fn(async (keys: readonly number[]) =>
       keys.map((k) => k * 10)
