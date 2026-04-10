@@ -19,10 +19,10 @@ export class DataLoader<K, V> {
   }
 
   load(key: K): Promise<V> {
-    const batch = this.getCurrentBatch();
-
     const cached = this.cache.get(key);
     if (cached) return cached;
+
+    const batch = this.getCurrentBatch();
 
     batch.keys.push(key);
     const promise = new Promise<V>((resolve, reject) => {
@@ -63,16 +63,24 @@ export class DataLoader<K, V> {
     this.batch = null;
     try {
       const values = await this.batchFn(batch.keys);
+      if(values.length !== batch.keys.length) {
+        throw new TypeError("DataLoader는 키 배열을 받아서 값 배열의 Promise를 반환하는 함수로 생성되어야 하는데, 해당 함수가 키 배열과 같은 길이의 배열 Promise를 반환하지 않았습니다.")
+      }
+
       batch.callbacks.forEach((callback, i) => {
         const value = values[i];
         if (value instanceof Error) {
+          this.clear(batch.keys[i]);
           callback.reject(value);
         } else {
           callback.resolve(value);
         }
       });
     } catch (error) {
-      batch.callbacks.forEach((callback) => callback.reject(error as Error));
+      batch.callbacks.forEach((callback, i) => {
+        this.clear(batch.keys[i]);
+        callback.reject(error as Error)
+      });
     }
   }
 }

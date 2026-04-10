@@ -25,6 +25,21 @@ describe('Step 3: 에러 처리 (Error Handling)', () => {
     expect(r3).toEqual({ status: 'fulfilled', value: 30 });
   });
 
+  it('batchFn 결과 배열 길이가 키 배열 길이와 다르면 모든 키가 reject된다', async () => {
+    // DB에서 존재하지 않는 id는 그냥 빠뜨리고 반환하는 실수
+    const batchFn = async (keys: readonly number[]) =>
+      keys.filter((k) => k !== 2).map((k) => k * 10); // id 2가 없어서 길이가 다름
+    const loader = new DataLoader(batchFn);
+
+    const results = await Promise.allSettled([
+      loader.load(1),
+      loader.load(2),
+      loader.load(3),
+    ]);
+
+    expect(results.every((r) => r.status === 'rejected')).toBe(true);
+  });
+
   it('batchFn 자체가 throw하면 해당 배치의 모든 키가 reject된다', async () => {
     const batchFn = async (_keys: readonly number[]) => {
       throw new Error('connection failed');
