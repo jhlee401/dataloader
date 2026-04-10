@@ -33,12 +33,18 @@ export class DataLoader<K, V> {
     return promise;
   }
 
-  clear(key: K): this {
+  loadMany(keys: readonly K[]): Promise<(V | Error)[]> {
+    const loadPromises = keys.map(key => this.load(key).catch(error => error));
+
+    return Promise.all(loadPromises);
+  }
+
+  clear(key: K) {
     this.cache.delete(key);
     return this;
   }
 
-  clearAll(): this {
+  clearAll() {
     this.cache.clear();
     return this;
   }

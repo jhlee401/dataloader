@@ -59,4 +59,26 @@ describe('Step 1: 배치 (Batching)', () => {
 
     expect(batchFn).toHaveBeenCalledTimes(2);
   });
+
+  it('loadMany는 여러 키를 한 번에 load하고 순서대로 결과를 반환한다', async () => {
+    const batchFn = async (keys: readonly number[]) =>
+      keys.map((k) => k * 10);
+    const loader = new DataLoader(batchFn);
+
+    const results = await loader.loadMany([1, 2, 3]);
+
+    expect(results).toEqual([10, 20, 30]);
+  });
+
+  it('loadMany는 일부 키가 실패해도 전체가 reject되지 않고 Error 객체를 배열에 담아 반환한다', async () => {
+    const batchFn = async (keys: readonly number[]) =>
+      keys.map((k) => (k === 2 ? new Error('not found') : k * 10));
+    const loader = new DataLoader(batchFn);
+
+    const results = await loader.loadMany([1, 2, 3]);
+
+    expect(results[0]).toBe(10);
+    expect(results[1]).toBeInstanceOf(Error);
+    expect(results[2]).toBe(30);
+  });
 });
